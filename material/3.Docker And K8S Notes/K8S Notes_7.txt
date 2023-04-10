@@ -1,0 +1,1966 @@
+Containerization --> Docker, Rocket(Rkt),Container-d
+Container Orchestration Tools --> Docker Swarm,Kubernetes,OpenShift
+
+
+Installation
+============
+
+Self Managed K8's Cluster
+ minikube --> Single Node K8's Cluster.
+ kubeadm --> We can setup multi node k8's cluster using kubeadm.
+
+
+Cloud Managed(Managed Services)
+EKS --> Elastic Kubernetes Service(AWS)
+AKS --> Azure Kubernetes Service(Azure)
+GKE --> Google Kubernetes Engine(GCP)
+
+KOPS --> Kubernetes Operations is a sotware using which we can create production ready
+highily available kubenetes services in Cloud like AWS.KOPS will leverage Cloud Sevices like
+AWS AutoScaling & Lanuch Configurations to setup K8's Master & Workers. It will Create 2 ASG & Lanuch Configs
+one for master and one for worekrs. Thesse Auto Scaling Groups will manage EC2 Instances.
+
+https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands#-strong-getting-started-strong-
+
+
+Name Spaces
+
+kubectl get namespaces
+
+# Create Name Space Using Imperative Command
+
+kubectl create namespace <nameSpaceName>
+
+ex:
+# Create name space using command(Imperative)
+kubectl create ns test-ns
+
+# Add labels to the existing name space
+
+kubectl label namespaces <namespace> <labelKey>=<value>
+
+ex:
+kubectl label namespaces test-ns team=testingteam
+
+
+Or same can be done using declarive way
+
+# Using Declarative Manifest file
+
+apiVersion: v1
+kind: Namespace
+metadata:
+ name: <NameSpaceName>
+ lables:           # Labels are key value pairs(Metadata)
+   <key>: <value>
+   <key>  <value>
+
+# Example   
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-ns
+  labels:
+    team: testingteam
+
+# Command to apply  
+kubectl apply -f <fileName>.yaml
+
+ex:
+
+kubectl apply -f test-ns.yaml
+
+
+
+
+# Create POD Using Command
+
+kubectl run <podName> --image=<imageName> --port=<containerPort> -n <namespaceName>
+
+ex:
+# If we don't mention name space it will create in default(current) namespace.
+kubectl run javawebapp --image=dockerhandson/java-web-app:1 --port=8080
+
+# List pods from current(default) ns
+kubect get pods
+
+# List pods from given  ns
+kubect get pods -n <namespaceName>
+
+ex:
+kubect get pods -n test-ns
+
+
+
+Kubernetes Objects Examples:
+
+POD
+
+Replication Controller
+
+Replica Set
+
+DaemonSet
+
+Deployment
+Statefullset
+
+Service
+
+PersistentVolume
+
+PersistentVolumeClaim
+
+CofgigMap
+
+Secret ..etc
+
+# POD Manifest
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: <PodName>
+  labels:
+    <Key>: <value>
+  namespace: <nameSpaceName>
+spec:
+  containers:
+  - name: <NameOfTheCotnainer>
+    image: <imagaName>
+	ports:
+	- containerPort: <portOfContainer>
+	
+Example:
+---	
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mavenwebapppod
+  labels:
+    app: mavenwebapp
+  namespace: test-ns	
+spec:
+  containers:
+  - name: mavenwebappcontainer
+    image: dockerhandson/maven-web-appliction:1
+    ports:
+    - containerPort: 8080
+
+
+kubectl apply -f <fileName.yml>
+
+kubectl apply -f <fileName.yml> -n <namespaceName>
+
+kubectl get all 
+kubectl get pods 
+kubectl get pods --show-labels
+kubectl get pods -o wide
+kubectl get pods -o wide --show-labels
+
+kubectl  describe pod <podName>
+kubectl  describe pod <podName> -n <namespace>
+
+
+
+
+# Multi Container POD
+apiVersion: v1
+kind: Pod
+metadata:
+  name:  <PODName>
+  namespace: <nameSpaceName>
+  labels:
+    <labelKey>: <labelValue> 
+spec:
+  containers:
+  - name: <nameOftheCotnainer>
+    image: <imageName>
+    ports:
+    - containerPort: <portNumberOfContainer>
+  - name: <nameOftheCotnainer>
+    image: <imageName>
+    ports:
+    - containerPort: <portNumberOfContainer>
+    
+    
+
+
+
+K8's Service   ---> In Kubernetes Service makes our pods accessable/discoverable with in the cluster or exposing them to internat.
+               		service will identify pods using it's labels And Selector. Whenever we create a service a ClusterIP (virtual IP) Address will be allocated for that serivce and DNS 					entry will be created for that IP. So internally we can access using service name(DNS).
+						
+	
+Service
+========
+apiVersion: v1
+kind: Service
+metadata:
+  name: <serviceName>
+  namespace: <nameSpace>
+spec:
+  type: <ClusterIP/NodePort>
+  selector:
+     <key>: <value>
+  ports:
+  - port: <servciePort>	# default It to 80
+    targetPort: <containerPort> 
+	
+
+With in Cluster ClusterIP
+==========================
+apiVersion: v1
+kind: Service
+metadata:
+  name: mavenwebappsvc
+  namespace: test-ns  
+spec:
+  type: ClusterIP
+  selector:
+     app: mavenwebapp
+  ports:
+  - port: 80
+    targetPort: 8080
+    
+
+Out side of Cluster Node Port
+========================
+apiVersion: v1
+kind: Service
+metadata:
+  name: mavenwebappsvc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+     app: mavenwebapp
+  ports:
+  - port: 80
+    targetPort: 8080
+    nodePort: 30033 # This Optional if u don't mention nodePort.Kuberetes will assign.
+	
+
+kubectl apply -f <file.yml>
+
+kubectl get svc 
+kubectl get all
+
+kubectl  describe service <serviceName>
+kubectl  describe service <serviceName> -n <namespace>
+kubectl  describe service <serviceName> -o wide
+
+
+One more app(Example)
+---------------------
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nodejspod
+  namespace: test-ns
+  labels:
+    app: nodeapp
+spec:
+  containers:
+  - name: nodeappcontainer
+    image: dockerhandson/node-app-mss:1
+    ports:
+    - containerPort: 9981
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodejsappsvc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+    app: nodeapp
+  ports:
+  - port: 80
+    targetPort: 9981
+    
+
+What is node port range?
+30000-32767
+
+
+kubectl get all --all-namespaces
+kubectl get all -n <namespace>
+kubectl get pods -n <namespace>
+kubectl get pods -n <namespace> - o wide
+
+kubectl get svc -n <namespace>
+
+ACCESS OUTSIDE USING NODEIP:NODEPORT.
+
+
+With in the cluster one application(POD) can access other applications(PODS) using Service name.
+
+What is FQDN?
+Fully Qualified Domain name. 
+If one POD need access to service & which are in differnent names space we have to use FQDN of the serivce.
+Syntax: <serivceName>.<namespace>.svc.cluster.local
+ex: mavenwebappsvc.test-ns.svc.cluster.local
+
+
+
+
+
+POD --> Pod is the smallest building block which we can deploy in k8s.Pod represents running process.Pod contains one or more containers.These container will share same network,storage and any other specifications.Pod will have unique IP Address in k8s cluster.
+
+Pods
+ SingleContainerPods --> Pod will have only one container.
+ 
+ MultiContainerPods(SideCar) --> POD will two or more contianers.
+ 
+We should not create pods directly for deploying applications.If pod is down it wont be rescheduled.
+
+We have to create pods with help of controllers.Which manages POD life cycle.
+	
+
+
+Controllers
+===========
+
+ReplicationController
+ReplicaSet
+DaemonSet
+Deploymnet
+StatefullSet
+
+
+
+
+
+# Replication Conrtoller
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: <replicationControllerName>
+  namespace: <nameSpaceName>
+spec:
+  replicas: <noOfReplicas>
+  selector:
+    <key>: <value>
+  template: # POD Template
+    metadata:
+      name: <PODName>
+      labels:
+	<key>: <value>
+    spec:
+    - containers:
+      - name: <nameOfTheContainer>
+	image: <imageName>
+	ports:
+	- containerPort: <containerPort>
+  	
+Example:
+========
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: javawebapprc
+  namespace: test-ns
+spec:
+  replicas: 1
+  selector:
+    app: javawebapp
+  template:
+    metadata:
+      name: javawebapppod
+      labels:
+        app: javawebapp
+    spec:
+      containers:
+      - name: javawebappcontainer
+        image: dockerhandson/java-web-app
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: javawebappsvc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+     app: javawebapp
+  ports:
+  - port: 80
+    targetPort: 8080	
+    
+    	
+
+# Another Appplication
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: pythonrc
+spec:
+  replicas: 1
+  selector:
+    app: pythonapp
+  template: # Pod template
+    metadata:
+      name: pythonapppod
+      labels:
+        app: pythonapp
+    spec:
+      containers:
+      - name: pythonappcontainer
+        image: dockerhandson/python-app:1
+        ports:
+        - containerPort: 5000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pythonsvc
+spec:
+  type: NodePort
+  selector:
+    app: pythonapp
+  ports:
+  - port: 80
+    targetPort: 5000
+	
+
+
+# Another Appplication
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  namespace: test-ns
+  name: mavenwebrc
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: mavenwebapppod
+      labels:
+        app: mavenwebapp
+    spec:
+      containers:
+      - name: mavenwebappcontainer
+        image: dockerhandson/maven-web-application:1
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mavenwebappsvc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+    app: mavenwebapp
+  ports:
+  - port: 80
+    targetPort: 8080
+    	
+kubectl apply -f <filename.yml>
+kubectl get rc 
+kubectl get rc -n <namespace>
+kubectl get all
+kubectl scale rc <rcName> --replicas <noOfReplicas>
+
+kubectl describe rc <rcName>
+kubectl delete rc <rcName>
+
+
+
+
+
+
+ReplicaSet:
+
+What is difference b/w replicaset and replication controller?
+
+It's next gernation of replication controller. Both manages the pod replicas. But only difference as now is
+selector support.
+
+RC --> Supports only equality based selectors.
+
+key == value(Equal Condition)
+selector:
+    app: javawebapp
+
+RS --> Supports eqaulity based selectors and also set based selectors.
+
+
+key == value(Equal Condition)
+
+Set Based
+key in (value1,value2,value3)
+key notin (value1) 
+
+selector:
+   matchLabels: # Equality Based
+     key: value
+   matchExpressions: # Set Based
+   - key: app
+     operator: IN
+     values:
+     - javawebpp
+     - javawebapplication
+	 
+# Mainfest File RS
+
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: <RSName>
+spec:
+  replicas: <noOfPODReplicas>
+  selector:  # To Match POD Labels.
+    matchLabels:  # Equality Based Selector
+      <key>: <value>
+    matchExpressions:  # Set Based Selector 
+    - key: <key>
+      operator: <in/not in>
+      values:
+      - <value1>
+      - <value2>
+  template:
+    metadata:
+      name: <PODName>
+      labels:
+	<key>: <value>
+    spec:
+    - containers:
+      - name: <nameOfTheContainer>
+	image: <imageName>
+        ports:
+	- containerPort: <containerPort>
+
+Example:
+
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata: 
+  name: javawebapprs
+spec: 
+  replicas: 1
+  selector: 
+    matchLabels: 
+      app: javawebapp
+  template: 
+    metadata: 
+      name: javawebapppod
+      labels: 
+        app: javawebapp
+    spec: 
+      containers: 
+      - image: dockerhandson/java-web-app:1
+        name: javawebappcontainer
+        ports: 
+        - containerPort: 8080
+
+
+kubectl get rs 
+kubectl get rs -n <namespace>
+kubectl get all
+kubectl scale rs <rsName> --replicas <noOfReplicas>
+
+kubectl describe rs <rsName>
+kubectl delete rs <rsName>
+
+
+
+
+
+
+What is difference b/w kubectl create and kubectl apply ?
+
+Create will Create an Object if it's not already created. Apply will perfrom create if object is not created earlier.If it's already
+created it will update.			   
+			   
+			   
+			   	
+
+kubectl apply (create & update)
+
+kubectl create -f <fileName.yml>
+
+kubectl update -f <fileName.yml>
+
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: <RSName>
+spec:
+  selector:  # To Match POD Labels.
+    matchLabels:  # Equality Based Selector
+      <key>: <value>
+    matchExpressions:  # Set Based Selector 
+    - key: <key>
+      operator: <in/not in>
+      values:
+      - <value1>
+      - <value2>
+  template:
+    metadata:
+      name: <PODName>
+      labels:
+	<key>: <value>
+      spec:
+        containers:
+	- name: <nameOfTheContainer>
+	  image: <imageName>
+	  ports:
+	  - containerPort: <containerPort>
+
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nginxds
+  namespace: test-ns
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+
+kubectl get ds 
+kubectl get ds -n <namespace>
+kubectl get all
+
+
+kubectl describe ds <dsName>
+kubectl delete ds <dsName>
+
+
+
+Change/Switch Context(NameSpace)
+=================================
+Note: If we don't mention -n <namespace> it will refer default namespace.
+If required we can change name space context.
+
+# View kubectl context
+kubectl config view | grep namespace
+
+# Change/Switch namespace
+
+kubectl config set-context --current  --namespace=<namespace>
+
+ex:
+kubectl config set-context --current --namespace=test-ns
+
+After setting context  by default it will point to that namespace.
+
+
+Change it to default namespace again if required
+ex:
+kubectl config set-context --current --namespace=default
+
+
+
+
+
+
+# Deployment ReCreate
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: javawebappdeployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: javawebapp
+  strategy:
+    type: Recreate    
+  template:
+    metadata:
+      name: javawebapppod
+      labels:
+        app: javawebapp
+    spec:
+      containers:
+      - name: javawebappcontainer
+        image: dockerhandson/java-web-app:1
+        ports:
+        - containerPort: 8080
+
+kubectl get deployment
+kubectl get rs
+kubectl get pods
+kubectl rollout status deployment <deploymentName>
+kubectl rollout history  deployment <deploymentName>
+kubectl rollout history  deployment <deploymentName> --revision 1  
+kubectl scale deployment <deploymentName> --replicas <noOfReplicas>
+
+We can update deployment using yml or using command
+	
+	
+# Update Deployment Image using command	
+
+kubectl set image deployment <deploymentName> <containerName>=<imageNameWithVersion> --record		
+ex:	
+kubectl set image deployment javawebappdeployment javawebappcontainer=dockerhandson/java-web-app:2 --record		
+
+Roll back to previous revison
+kubectl rollout undo  deployment <deploymentName> --to-revision 1
+
+
+
+# Rolling Update
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: javawebappdeployment
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: javawebapp
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  minReadySeconds: 30
+  template:
+    metadata:
+      name: javawebapppod
+      labels:
+        app: javawebapp
+    spec:
+      containers:
+      - name: javawebappcontainer
+        image: dockerhandson/java-web-app:1
+        ports:
+        - containerPort: 8080 
+
+
+kubectl get deployment
+kubectl get rs
+kubectl get pods
+kubectl rollout status deployment <deploymentName>
+kubectl rollout history  deployment <deploymentName>
+kubectl rollout history  deployment <deploymentName> --revision 1  
+kubectl rollout undo  deployment <deploymentName> --to-revision 1  
+kubectl scale deployment <deploymentName> --replicas <noOfReplicas>
+	
+# Update Deployment Image using command	
+
+kubectl set image deployment <deploymentName> <containerName>=<imageNameWithVersion> --record
+
+
+
+POD AutoScaler
+==============
+What is difference b/w Kubernetes AutoScaling(POD AutoScaling) & AWS AutoScaling?
+
+
+POD AutoScaling --> Kuberenets POD AutoScaling Will make sure u have minimum number pod replicas available at any time & based the observed CPU/Memory utilization on pods it can scale PODS.  HPA Will Scale up/down pod replicas of Deployment/ReplicaSet/ReplicationController based on observerd CPU & Memory utilization base the target specified.
+
+
+AWS AutoScaling --> It will make sure u have enough number of nodes(Servers). Always it will maintian minimum number of nodes. Based the observed CPU/Memory utilization of node it can scale nodes.
+
+
+Note: Deploy metrics server as k8s addon which will fetch metrics. Follow bellow link to deploy metrics Server.
+====
+https://github.com/MithunTechnologiesDevOps/metrics-server
+
+
+
+
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hpadeployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      name: hpapod
+  template:
+    metadata:
+      labels:
+        name: hpapod
+    spec:
+      containers:
+        - name: hpacontainer
+          image: k8s.gcr.io/hpa-example
+          ports:
+          - name: http
+            containerPort: 80
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "100m"
+              memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hpaclusterservice
+  labels:
+    name: hpaservice
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    name: hpapod
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hpadeploymentautoscaler
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: hpadeployment
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 40
+  - type: Resource
+    resource:
+     name: memory
+     target:
+      type: Utilization
+      averageUtilization: 40
+	  
+
+# Create temp POD using below command interatively and increase the load on demo app by accessing the service.
+
+kubectl run -i --tty load-generator --rm  --image=busybox /bin/sh
+
+
+# Access the service to increase the load.
+
+while true; do wget -q -O- http://hpaclusterservice; done
+
+
+
+
+
+# Java Web Appliction With HPA
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: javawebappdeployment
+  namespace: test-ns
+spec:
+  selector:
+    matchLabels:
+      app: javawebapp
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      name: javawebapppod
+      labels:
+        app: javawebapp
+    spec:
+      containers:
+      - name: javawebappcontainer
+        image: dockerhandson/java-web-app:4
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: 500m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+---
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: javawebappdeploymenthpa
+  namespace: test-ns
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: javawebappdeployment
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Resource
+    resource:
+     name: memory
+     target:
+      type: Utilization
+      averageUtilization: 85
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: javawebappsvc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+    app: javawebapp
+  ports:
+  - port: 80
+    targetPort: 8080
+
+
+# Spring App & Mongod DB as POD with out volumes
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: springapp
+  namespace: test-ns
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: springapp
+  template:
+    metadata:
+      labels:
+        app: springapp
+    spec:
+      containers:
+      - name: springappcontainer
+        image: dockerhandson/spring-boot-mongo:1
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8080
+        env:
+        - name: MONGO_DB_HOSTNAME
+          value:  mongosvc
+        - name: MONGO_DB_USERNAME
+          value: devdb
+        - name: MONGO_DB_PASSWORD
+          value: devdb@123
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: springappsvc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+    app: springapp
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: mongodb
+  namespace: test-ns
+spec:
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      name: myapp
+      labels:
+        app: mongo
+    spec:
+      containers:
+      - name: mongodbcontainer
+        image: mongo
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: devdb
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: devdb@123
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongosvc
+  namespace: test-ns
+spec:
+  type: ClusterIP
+  selector:
+    app: mongo
+  ports:
+  - port: 27017
+    targetPort: 27017
+
+# Mongo db pod with volumes(HostPath)
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: springapp
+  namespace: test-ns
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: springapp
+  template:
+    metadata:
+      labels:
+        app: springapp
+    spec:
+      containers:
+      - name: springappcontainer
+        image: dockerhandson/spring-boot-mongo:1
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8080
+        env:
+        - name: MONGO_DB_HOSTNAME
+          value:  mongosvc
+        - name: MONGO_DB_USERNAME
+          value: devdb
+        - name: MONGO_DB_PASSWORD
+          value: devdb@123
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: springappsvc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+    app: springapp
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: mongodb
+  namespace: test-ns
+spec:
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      name: myapp
+      labels:
+        app: mongo
+    spec:
+      containers:
+      - name: mongodbcontainer
+        image: mongo
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: devdb
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: devdb@123
+        volumeMounts:
+        - name: mogodbhostvol
+          mountPath: /data/db
+      volumes:
+      - name: mogodbhostvol
+        hostPath:
+          path: /mongodata
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongosvc
+  namespace: test-ns
+spec:
+  type: ClusterIP
+  selector:
+    app: mongo
+  ports:
+  - port: 27017
+    targetPort: 27017
+
+
+	
+
+Configuration of NFS Server
+===========================
+
+Step 1: 
+
+Create one Server for NFS
+
+Install NFS Kernel Server in 
+Before installing the NFS Kernel server, we need to update our system’s repository index with that of the Internet through the following apt command as sudo:
+
+$ sudo apt-get update
+
+The above command lets us install the latest available version of a software through the Ubuntu repositories.
+
+Now, run the following command in order to install the NFS Kernel Server on your system:
+
+$ sudo apt install nfs-kernel-server
+
+
+Step 2: Create the Export Directory
+
+sudo mkdir -p /mnt/nfs_share/
+
+# As we want all clients to access the directory, we will remove restrictive permissions.
+sudo chown nobody:nogroup /mnt/nfs_share/
+sudo chmod 777 /mnt/nfs_share/
+
+Step 3: Assign server access to client(s) through NFS export file
+
+sudo vi /etc/exports
+
+
+#/mnt/share/ <clientIP or Clients CIDR>(rw,sync,no_subtree_check,no_root_squash)
+ #Ex:
+/mnt/nfs_share/ *(rw,sync,no_subtree_check,no_root_squash)
+
+
+
+
+Step 4: Export the shared directory
+
+$ sudo exportfs -a
+
+
+
+sudo systemctl restart nfs-kernel-server
+
+Step 5: Open firewall for the client (s) PORT 2049
+
+
+
+
+Configuring the Client Machines(Kubernetes Nodes)
+================================================
+
+Step 1: Install NFS Common
+Before installing the NFS Common application, we need to update our system’s repository index with that of the Internet through the following apt command as sudo:
+
+$ sudo apt-get update
+
+
+$ sudo apt-get install nfs-common
+
+
+Deploy mongdb pods using NFS Volume in k8s
+
+
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: springapp
+  namespace: test-ns
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: springapp
+  template:
+    metadata:
+      labels:
+        app: springapp
+    spec:
+      containers:
+      - name: springappcontainer
+        image: dockerhandson/spring-boot-mongo:1
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8080
+        env:
+        - name: MONGO_DB_HOSTNAME
+          value:  mongosvc
+        - name: MONGO_DB_USERNAME
+          value: devdb
+        - name: MONGO_DB_PASSWORD
+          value: devdb@123
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: springappsvc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+    app: springapp
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: mongodb
+  namespace: test-ns
+spec:
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      name: myapp
+      labels:
+        app: mongo
+    spec:
+      containers:
+      - name: mongodbcontainer
+        image: mongo
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: devdb
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: devdb@123
+        volumeMounts:
+        - name: mogodbvol
+          mountPath: /data/db
+      volumes:
+      - name: mogodbvol
+        nfs:
+          server: 172.31.47.141
+          path: /mnt/nfs_share
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongosvc
+  namespace: test-ns
+spec:
+  type: ClusterIP
+  selector:
+    app: mongo
+  ports:
+  - port: 27017
+    targetPort: 27017
+    
+
+
+PV --> It's a piece of storage(hostPath,nfs,ebs,azurefile,azuredisk) in k8s cluster. PV exists independently from 
+from pod life cycle whihc is consuming.
+
+PersistentVolumeClaim --> It's request for storage(Volume).Using PVC
+                          we can request(Specifiy) how much storage u need
+			  and with what access mode u need.
+			  
+			  
+Persistent Volumes are provisioned in two ways, Statically or Dynamically.
+
+1) Static Volumes (Manual Provisionging)
+    As a k8's Administrator will create a PV manullay so that pv's can be avilable for PODS which requires.
+	Create a PVC so that PVC will be attached PV. We can use PVC with PODS to get an access to PV. 
+	
+2) Dynamic Volumes (Dynamic Provisioning)
+     It's possible to have k8's provsion(Create) volumes(PV) as required. Provided we have configured storageClass.
+	 So when we create PVC if PV is not available Storage Class will Create PV dynamically.
+   
+
+PVC
+If pod requires access to storage(PV),it will get an access using PVC. PVC will be attached to PV.
+
+
+
+PersistentVolume – the low level representation of a storage volume.
+PersistentVolumeClaim – the binding between a Pod and PersistentVolume.
+Pod – a running container that will consume a PersistentVolume.
+StorageClass – allows for dynamic provisioning of PersistentVolumes.
+
+
+PV Will have Access Modes
+
+ReadWriteOnce – the volume can be mounted as read-write by a single node
+ReadOnlyMany – the volume can be mounted read-only by many nodes
+ReadWriteMany – the volume can be mounted as read-write by many nodes
+
+In the CLI, the access modes are abbreviated to:
+
+RWO - ReadWriteOnce
+ROX - ReadOnlyMany
+RWX - ReadWriteMany
+
+
+Claim Policies
+
+A Persistent Volume Claim can have several different claim policies associated with it including
+
+Retain – When the claim(PVC) is deleted, the volume(PV) will exists.
+Recycle – When the claim is deleted the volume remains but in a state where the data can be manually recovered.
+Delete – The persistent volume is deleted when the claim is deleted.
+The claim policy (associated at the PV and not the PVC) is responsible for what happens to the data on when the claim has been deleted.
+
+
+Commands
+
+kubectl get pv
+kubectl get pvc
+kubectl get storageclass
+kubectl describe pvc <pvcName>
+kubectl describe pv <pvName>
+
+
+
+If Storage is calss not configued
+=================================
+1) Create a PV manually if not already available
+
+2) Claim the PV by creating PVC
+
+3) Use that PVC in your pod manfiset
+
+
+If Storage is calss configued
+=============================
+
+1) Claim the PV by creating PVC
+
+2) Use that PVC in your pod manfiset
+
+
+
+
+Find Sample PV & PVC Yml from below Git Hub
+
+https://github.com/MithunTechnologiesDevOps/Kubernates-Manifests/tree/master/pv-pvc
+
+Static Volumes
+1) Create PV
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-hostpath
+  namespace: test-ns
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+  - ReadWriteOnce
+  hostPath:
+    path: "/mongodata"
+
+2) Create PVC
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongopvc
+  namespace: test-ns
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+		   
+3) Use PVC with POD in POD manifest.
+
+# Mongo db pod with PVC
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: mongodb
+  namespace: test-ns
+spec:
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+     metadata:
+       name: mongodbpod
+       labels:
+         app: mongodb
+     spec:
+       volumes:
+       - name: mongovol
+         persistentVolumeClaim:
+           claimName: mongopvc
+       containers:
+       - name: mongodbcontainer
+         image: mongo
+         ports:
+         - containerPort: 27017
+         env:
+         - name: MONGO_INITDB_ROOT_USERNAME
+           value: devdb
+         - name: MONGO_INITDB_ROOT_PASSWORD
+           value: devdb@123
+         volumeMounts:
+         - name: mongovol
+           mountPath: /data/db
+
+
+
+Commands://
+=========
+
+kubectl get pv
+kubectl get pvc
+
+kubectl describe pv <pvName>
+kubectl describe pvc <pvcName>    
+
+
+
+
+
+kubectl get storageclass
+
+Note: Configure Storage Class for Dynamic Volumes based on infra sturcture. Make that one as default storage class.
+
+NFS Provisioner
+Prerequisiets:
+1) NFS Server
+2) Insall nfs client softwares in all k'8s nodes.
+
+Find NFS Provisioner below.
+
+https://raw.githubusercontent.com/MithunTechnologiesDevOps/Kubernates-Manifests/master/pv-pvc/nfsstorageclass.yml
+
+Get yml from above link.
+
+$ curl https://raw.githubusercontent.com/MithunTechnologiesDevOps/Kubernates-Manifests/master/pv-pvc/nfsstorageclass.yml >> nfsstorageclass.yml
+
+And update Your NFS Server IP Address(2 Places you need update IP Addrees) And path of nfs share. Apply
+
+kubectl apply -f nfsstorageclass.yml
+
+Dynamic Volumes
+
+Refer below link where we are creating PVC & PODS :
+
+https://raw.githubusercontent.com/MithunTechnologiesDevOps/Kubernates-Manifests/master/SpringBoot-Mongo-DynamicPV.yml
+
+1) Create PVC(If we don't mention storageclass name it will use defautl storage class which is configured.) It will create PV.
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodb-nfs-pvc
+  namespace: test-ns
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+	  
+2) Use PVC with POD in POD manifest.
+
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: mongodb
+  namespace: test-ns
+spec:
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+     metadata:
+       name: mongodbpod
+       labels:
+         app: mongodb
+     spec:
+       volumes:
+       - name: mongodb-pvc
+         persistentVolumeClaim:
+           claimName: mongodb-nfs-pvc   
+       containers:
+       - name: mongodbcontainer
+         image: mongo
+         ports:
+         - containerPort: 27017
+         env:
+         - name: MONGO_INITDB_ROOT_USERNAME
+           value: devdb
+         - name: MONGO_INITDB_ROOT_PASSWORD
+           value: devdb@123
+         volumeMounts:
+         - name: mongodb-pvc
+           mountPath: /data/db
+		   
+# Complete Manifest Where in single yml we defined Deployment & Service for SpringApp & PVC(with NFS Dynamic StorageClass),ReplicaSet & Service For Mongo.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: springappdeployment
+  namespace: test-ns
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: springapp
+  template:
+    metadata:
+      name: springapppod
+      labels:
+        app: springapp
+    spec:
+      containers:
+      - name: springappcontainer
+        image: dockerhandson/spring-boot-mongo
+        ports:
+        - containerPort: 8080
+        env:
+        - name: MONGO_DB_USERNAME
+          value: devdb
+        - name: MONGO_DB_PASSWORD
+          value: devdb@123
+        - name: MONGO_DB_HOSTNAME
+          value: mongo 
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: springapp
+  namespace: test-ns
+spec:
+  selector:
+    app: springapp
+  ports:
+  - port: 80
+    targetPort: 8080
+    nodePort: 30032
+  type: NodePort
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodbpvc 
+  namespace: test-ns
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: mongodb
+  namespace: test-ns
+spec:
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+     metadata:
+       name: mongodbpod
+       labels:
+         app: mongodb
+     spec:
+       volumes:
+       - name: pvc
+         persistentVolumeClaim:
+           claimName: mongodbpvc     
+       containers:
+       - name: mongodbcontainer
+         image: mongo
+         ports:
+         - containerPort: 27017
+         env:
+         - name: MONGO_INITDB_ROOT_USERNAME
+           value: devdb
+         - name: MONGO_INITDB_ROOT_PASSWORD
+           value: devdb@123
+         volumeMounts:
+         - name: pvc
+           mountPath: /data/db   
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  namespace: test-ns
+spec:
+  type: ClusterIP
+  selector:
+    app: mongodb
+  ports:
+  - port: 27017
+    targetPort: 27017
+	
+
+
+
+
+Config Maps & Secrets
+======================
+
+We can create ConfigMap & Secretes in Cluster using command or also using yml.
+
+
+ConfigMap Using Command
+======================
+kubectl create configmap springappconfig --from-literal=mongodbusername=devdb -n test-ns
+
+
+Or Using yml
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:      # We can define multiple key value pairs.
+  name: springappconfig
+  namespace: test-ns
+data:
+  mongodbusername: devdb
+  
+  
+Secret Using Command: 
+
+kubectl create secret generic springappsecret --from-literal=mongodbpassword=devdb@123 -n test-ns
+
+
+Using Yml:
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: springappsecret
+  namespace: test-ns
+type: Opaque
+stringData:   # We can define multiple key value pairs.
+  mongodbpassword: devdb@123    
+  
+
+In Production Cluster we can create with differnet values.
+
+kubectl create configmap springappconfig --from-literal=mongodbusername=proddb  --from-literal=mongodbusername=proddb 
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: springappconfig
+  namespace: test-ns
+data:            # We can define multiple key value pairs.
+  mongodbusername: proddb
+
+kubectl create secret generic springappsecret --from-literal=mongodbpassword=proddb@123
+
+
+Using Yml:
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: springappsecret
+  namespace: test-ns
+type: Opaque
+stringData:   # We can define multiple key value pairs.
+  mongodbpassword: prodb@123
+  
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: springappdeployment
+  namespace: test-ns
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: springapp
+  template:
+    metadata:
+      labels:
+        app: springapp
+    spec:
+      containers:
+      - name: springappcontainer
+        image: dockerhandson/spring-boot-mongo:1
+        env:
+        - name: MONGO_DB_HOSTNAME
+          value: mongosvc
+        - name: MONGO_DB_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: springappconfig
+              key: mongodbusername
+        - name: MONGO_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: springappsecret
+              key: mongodbpassword
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: springappsvc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+    app: springapp
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: mongodb
+  namespace: test-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+      - name: mongocontainer
+        image: mongo
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: springappconfig
+              key: mongodbusername
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: springappsecret
+              key:  mongodbpassword
+        volumeMounts:
+        - name: mongodbhostvol
+          mountPath: /data/db
+      volumes:
+      - name: mongodbhostvol
+        hostPath:
+          path: /tmp/mongo
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongosvc
+  namespace: test-ns
+spec:
+  selector:
+    app: mongo
+  ports:
+  - port: 27017
+    targetPort: 27017
+    
+
+
+
+
+
+
+ConigMap As Volume Example
+=========================
+
+# ConfigMap with file data
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: javawebappconfig
+data:
+  tomcat-users.xml: |
+    <?xml version='1.0' encoding='utf-8'?>
+      <tomcat-users xmlns="http://tomcat.apache.org/xml"
+                      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                      xsi:schemaLocation="http://tomcat.apache.org/xml tomcat-users.xsd"
+                      version="1.0">
+       <user username="tomcat" password="tomcat" roles="admin-gui,manager-gui"/>
+    </tomcat-users>
+	
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: javawebdeployment
+spec:
+  replicas: 2
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: javawebapp
+  template:
+    metadata:
+      name: javawebappod
+      labels:
+        app: javawebapp
+    spec:
+      containers:
+      - name: javawebappcontainer
+        image: dockerhandson/java-web-app:3
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: tomcatusersconfig
+          mountPath: "/usr/local/tomcat/conf/tomcat-users.xml"
+          subPath: "tomcat-users.xml"
+      volumes:
+      - name: tomcatusersconfig
+        configMap:
+          name: javawebappconfig
+          items:
+          - key: "tomcat-users.xml"
+            path: "tomcat-users.xml"
+
+
+
+			
+Pull an Image from a Private Registry
+=====================================
+
+kubectl create secret docker-registry regcred --docker-server=<your-registry-server> --docker-username=<your-name> --docker-password=<your-pword> --docker-email=<your-email>
+
+
+<your-registry-server> is your Private Docker Registry FQDN. Use https://index.docker.io/v1/ for DockerHub.
+<your-name> is your Docker username.
+<your-pword> is your Docker password.
+<your-email> is your Docker email.
+
+ex: 
+Docker Hub: --docker-server is optional in case of docker hub
+
+kubectl create secret docker-registry regcred --docker-server=https://index.docker.io/v1/ --docker-username=dockerhandson --docker-password=password
+
+ECR # Get ECR password using AWS CLI and use the password below. If its EKS cluster we just need to attache ECR Policies(Permsisssions) to IAM Role and attach that role EKS nodes.No
+need to create a secret and use that as imagepull secret.
+
+kubectl create secret docker-registry ecrregistrycredentails --docker-server=https://567763916643.dkr.ecr.ap-south-1.amazonaws.com --docker-username=AWS --docker-password=password
+				
+# Nexus
+kubectl create secret docker-registry nexuscred --docker-server=172.31.106.247:8083 --docker-username=admin --docker-password=admin123
+
+
+Use above scret as imagepull screts in pod template.	 
+
+
+
+
+
+
+Liveness Probe & Ready ness Probes
+==================================  				
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: javawebappdeployment
+spec:
+  replicas: 2
+  revisionHistoryLimit: 10
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: javawebapp
+  template:
+    metadata:
+      name: javawebapppod
+      labels:
+        app: javawebapp
+    spec:
+      containers:
+      - name: javawebappcontainer
+        image: dockerhandson/java-web-app:1
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 1
+            memory: 1Gi
+        livenessProbe:
+          httpGet:
+            path: /java-web-app
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+	  timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /java-web-app
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+ name: javawebappsvc
+spec:
+  type: NodePort
+  selector:
+    app: javawebapp
+  ports:
+  - port: 80
+    targetPort: 8080       

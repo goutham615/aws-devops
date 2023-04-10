@@ -1,0 +1,35 @@
+node
+{
+  def buildNumber= BUILD_NUMBER
+  stage("git clone")
+  {
+    git branch: 'master', url: 'https://github.com/msr242714/java-web-app-docker.git'
+  }
+
+  stage("Creating Maven Package")
+  {
+    def mavenHome= tool name: "Maven",type: "maven"
+    def mavenCMD= "${mavenHome}/bin/mvn"
+    sh "${mavenCMD} clean package" 
+  }
+stage("Build Docker Image")
+{
+sh "docker build -t maanvish/java-web-app:${buildNumber} ."
+}
+stage("docker push image to the docker hub repository")
+{
+ withCredentials([string(credentialsId: 'DockerHubPass', variable: 'DockerHubPass')])
+    {  
+sh "docker login -u maanvish -p ${DockerHubPass}"  
+}
+sh "docker push maanvish/java-web-app:${buildNumber}"
+}
+
+stage("Deploy docker service in docker swarm cluster")
+{
+ sshagent(['Docker_Deploye_Server_SSH']) {
+    sh "ssh -o StrictHostKeyChecking=no ubuntu@172.31.36.25 docker service rm -f javawebapp || true"	
+    sh "ssh -o StrictHostKeyChecking=no ubuntu@172.31.36.25 docker service create --name javawebapp -p 8080:8080 --replicas 2 maanvish/java-web-app:${buildNumber}"
+  }
+ }
+}
